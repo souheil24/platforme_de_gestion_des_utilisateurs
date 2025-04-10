@@ -1,0 +1,220 @@
+{% load static %}
+{% load custom_filters %}  {# Chargement des filtres personnalisés #}
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+        body {
+            min-height: 100vh;
+            width: 100%;
+            background: linear-gradient(135deg, #87CEEB, #B0E0E6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            padding: 20px;
+            position: relative;
+        }
+        .dashboard {
+            width: 100%;
+            max-width: 1200px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            padding: 40px;
+            text-align: center;
+            margin: 30px auto;
+        }
+        h2 {
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 28px;
+            font-weight: 600;
+        }
+        .buttons {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .select-department {
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+        }
+        button, .btn {
+            background: #0088CC;
+            color: #fff;
+            padding: 12px 18px;
+            font-size: 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: 0.3s ease;
+            text-decoration: none;
+        }
+        button:hover, .btn:hover {
+            background: #0077B6;
+        }
+        .logout {
+            background: #dc3545;
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: fit-content;
+            min-width: 200px; 
+            text-align: center;
+            font-size: 14px;
+            padding: 12px 20px; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 6px; 
+            z-index: 1000;
+        }
+        .logout:hover {
+            background: #b52a38;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+            text-align: center;
+        }
+        th {
+            background: #0088CC;
+            color: #fff;
+        }
+        tr:hover {
+            background: rgba(0, 136, 204, 0.1);
+        }
+        .actions {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        .download {
+            background: #28a745;
+            padding: 6px 12px;
+            border-radius: 6px;
+            color: white;
+            font-size: 14px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            border: none;
+            cursor: pointer;
+        }
+        .download:hover {
+            background: #218838;
+        }
+        .delete {
+            background: #dc3545;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        @media (max-width: 768px) {
+            .dashboard {
+                width: 100%;
+                padding: 20px;
+            }
+            .buttons {
+                flex-direction: column;
+            }
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <h2>Bienvenue, {{ request.user.name_user }} !</h2>
+
+        <!-- ✅ Sélection du département si l'utilisateur en a plusieurs -->
+        {% if departments_allowed|length > 1 %}
+            <form method="GET" action="{% url 'ajouter_fichier' %}">
+                <label for="department">Choisissez un département :</label>
+                <select name="department" id="department" class="select-department">
+                    {% for dep in departments_allowed %}
+                        <option value="{{ dep.id_department }}">{{ dep.name_dep }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit">📤 Ajouter un fichier</button>
+            </form>
+        {% elif departments_allowed|length == 1 %}
+            <p>Département : <strong>{{ departments_allowed.0.name_dep }}</strong></p>
+            <a href="{% url 'ajouter_fichier' %}" class="btn">
+                <i class="fas fa-upload"></i> Ajouter un fichier
+            </a>
+        {% endif %}
+
+        <h3>Fichiers accessibles</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Nom du fichier</th>
+                    <th>Département</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for fichier in fichiers %}
+                    <tr>
+                        <td>{{ fichier.name_file }}</td>
+                        <td>{{ fichier.id_department.name_dep }}</td>
+                        <td>{{ fichier.date|date:"Y-m-d H:i:s" }}</td>
+                        <td class="actions">
+                            {% with roles_dict|get_item:fichier.id_department.id_department as role %}
+                                {% if role in "1,4,5,7" %}
+                                    <a href="{{ fichier.file_upload.url }}" class="download" download>
+                                        <i class="fas fa-download"></i> Télécharger
+                                    </a>
+                                {% endif %}
+                                {% if role in "3,5,6,7" %}
+                                    <form method="POST" action="{% url 'supprimer_fichier' fichier.id %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="delete">
+                                            <i class="fas fa-trash"></i> Supprimer
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <button class="logout" onclick="window.location.href='{% url 'deconnexion' %}'">
+        <i class="fas fa-sign-out-alt"></i> Déconnexion
+    </button>
+</body>
+</html>
